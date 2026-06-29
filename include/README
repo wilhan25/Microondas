@@ -1,0 +1,9 @@
+Descrição:
+    Um microondas que funciona com display oled e controle infravermelho
+
+Etapas:
+    ok  Fazer o controle infravermelho funcionar
+    ok  Fazer um botão do controle acender o led
+    ok  fazer a função que ao pressionar um botão ligue o motor e o led por 3 segundos
+    Fazer o display mostrar as informações na tela
+    
