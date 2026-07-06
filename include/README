@@ -3,7 +3,24 @@ Descrição:
 
 Etapas:
     ok  Fazer o controle infravermelho funcionar
-    ok  Fazer um botão do controle acender o led
+    ok  Mapear todos os botões e seus devidos códigos
+    ok Fazer a task para o ler os botoes do controle
+    ok Fazer um botão do controle acender o led
     ok  fazer a função que ao pressionar um botão ligue o motor e o led por 3 segundos
-    Fazer o display mostrar as informações na tela
+    ok Fazer o display mostrar as informações na tela
+    Criar funções para Lasanha, pipoca e Descongelar
+    Controle de Potencia e de tempo pelos números
     
+Funcionalidades:
+    Relógio
+    Botão de aquecer por 30 segundos
+    Programação de tempo para aquecer
+    Controle de potencia do aquecimento
+    Funções preprogramadas de descongelar e pipoca
+
+Estados:
+    Parado (mostra o relogio)
+    recebendo valores para aquecer''
+    Aquecendo
+    Pronto
+    alterando potencia
