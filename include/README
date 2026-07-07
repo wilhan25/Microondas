@@ -8,19 +8,15 @@ Etapas:
     ok Fazer um botão do controle acender o led
     ok  fazer a função que ao pressionar um botão ligue o motor e o led por 3 segundos
     ok Fazer o display mostrar as informações na tela
+    ok Criar a funcionalidade de programar o tempo de funcionamento do microondas e mostrar na tela o tempo restante
     Criar funções para Lasanha, pipoca e Descongelar
     Controle de Potencia e de tempo pelos números
     
 Funcionalidades:
-    Relógio
-    Botão de aquecer por 30 segundos
-    Programação de tempo para aquecer
-    Controle de potencia do aquecimento
-    Funções preprogramadas de descongelar e pipoca
+    ok Relógio
+    ok Programação de tempo para aquecer
 
 Estados:
     Parado (mostra o relogio)
-    recebendo valores para aquecer''
+    recebendo valores para aquecer
     Aquecendo
-    Pronto
-    alterando potencia

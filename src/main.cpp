@@ -109,6 +109,49 @@ Adafruit_SSD1306 display(Largura_Tela, Comprimento_Tela, &Wire, -1);
 volatile bool motor_ligado = false;
 volatile uint32_t tempo_restante_ms = 0; // tempo que ainda falta girar
 
+// ── relógio simples baseado em millis() ──────
+// defina aqui o horário inicial
+#define HORA_INICIAL 10
+#define MINUTO_INICIAL 30
+#define SEGUNDO_INICIAL 0
+
+// calcula segundos totais desde meia-noite no boot
+uint32_t segundo_boot = (HORA_INICIAL * 3600) +
+                        (MINUTO_INICIAL * 60) +
+                        SEGUNDO_INICIAL;
+
+void horaAtual(uint8_t &h, uint8_t &m, uint8_t &s)
+{
+  // pega quantos segundos passaram desde o boot
+  uint32_t segundos_passados = millis() / 1000;
+
+  // soma com o horário inicial e aplica módulo 24h
+  uint32_t total = (segundo_boot + segundos_passados) % 86400; // 86400 = 24*60*60
+
+  h = total / 3600;
+  m = (total % 3600) / 60;
+  s = total % 60;
+}
+
+// ── estado da entrada de tempo ────────────────
+// armazena até 4 dígitos: [0]=MM dezena, [1]=MM unidade, [2]=SS dezena, [3]=SS unidade
+volatile uint8_t digitos[4] = {0, 0, 0, 0};
+volatile uint8_t num_digitos = 0; // quantos dígitos foram digitados
+volatile bool digitando = true;   // false quando motor está rodando
+
+uint32_t digitosParaMs()
+{
+  // ex: dígitos [1,3,0,0] → 13 min 00 seg → 780000ms
+  uint8_t minutos = digitos[0] * 10 + digitos[1];
+  uint8_t segundos = digitos[2] * 10 + digitos[3];
+
+  // limita segundos a 59
+  if (segundos > 59)
+    segundos = 59;
+
+  return ((uint32_t)minutos * 60 + segundos) * 1000;
+}
+
 void motorDesligar()
 {
   digitalWrite(IN1, LOW);
@@ -138,38 +181,111 @@ void TaskControle(void *pv)
       Serial.printf("[IR] 0x%08X\n", linha);
       switch (btn)
       {
-      case BTN_PLAY:
-        // liga o motor por 3 segundos
-        motor_ligado = true;
-        tempo_restante_ms = 3000;
-        Serial.println("Motor: ligado por 3s");
-        break;
+      // ── dígitos numéricos ─────────────────────
+      case BTN_0:
+      case BTN_1:
+      case BTN_2:
+      case BTN_3:
+      case BTN_4:
+      case BTN_5:
+      case BTN_6:
+      case BTN_7:
+      case BTN_8:
+      case BTN_9:
+      {
+        if (!digitando)
+          break; // ignora se estiver aquecendo
 
-      case BTN_PLUS:
-        // adiciona 30 segundos ao tempo restante
-        tempo_restante_ms += 30000;
-        motor_ligado = true;
-        Serial.printf("Motor: +30s (total %lums)\n", tempo_restante_ms);
-        break;
+        // descobre qual número foi apertado
+        uint8_t num;
+        switch (btn)
+        {
+        case BTN_0:
+          num = 0;
+          break;
+        case BTN_1:
+          num = 1;
+          break;
+        case BTN_2:
+          num = 2;
+          break;
+        case BTN_3:
+          num = 3;
+          break;
+        case BTN_4:
+          num = 4;
+          break;
+        case BTN_5:
+          num = 5;
+          break;
+        case BTN_6:
+          num = 6;
+          break;
+        case BTN_7:
+          num = 7;
+          break;
+        case BTN_8:
+          num = 8;
+          break;
+        case BTN_9:
+          num = 9;
+          break;
+        default:
+          num = 0;
+          break;
+        }
 
-      case BTN_MINUS:
-        // remove 30 segundos, mínimo zero
-        if (tempo_restante_ms > 30000)
-          tempo_restante_ms -= 30000;
+        // empurra os dígitos para a esquerda e adiciona o novo na direita
+        // [1,3,0,0] + 5 → [3,0,0,5]
+        if (num_digitos < 4)
+        {
+          digitos[num_digitos] = num;
+          num_digitos++;
+        }
         else
         {
-          tempo_restante_ms = 0;
-          motor_ligado = false;
+          // já tem 4 dígitos: descarta o mais antigo e adiciona o novo
+          digitos[0] = digitos[1];
+          digitos[1] = digitos[2];
+          digitos[2] = digitos[3];
+          digitos[3] = num;
         }
-        Serial.printf("Motor: -30s (total %lums)\n", tempo_restante_ms);
-        break;
 
+        Serial.printf("Digitando: %d%d:%d%d\n",
+                      digitos[0], digitos[1], digitos[2], digitos[3]);
+        break;
+      }
+
+      // ── PLAY: inicia a contagem ───────────────
+      case BTN_PLAY:
+      {
+        if (!digitando)
+          break; // já está aquecendo
+
+        uint32_t ms = digitosParaMs();
+        if (ms == 0)
+          break; // não inicia com tempo zero
+
+        tempo_restante_ms = ms;
+        motor_ligado = true;
+        digitando = false;
+        digitalWrite(led_pin, HIGH);
+
+        Serial.printf("Iniciando: %d%d:%d%d → %lums\n",
+                      digitos[0], digitos[1], digitos[2], digitos[3], ms);
+        break;
+      }
+
+      // ── POWER: cancela tudo e volta ao início ─
       case BTN_POWER:
-        // para tudo imediatamente
         motor_ligado = false;
         tempo_restante_ms = 0;
+        digitando = true;
+        num_digitos = 0;
+        digitos[0] = digitos[1] = digitos[2] = digitos[3] = 0;
+        digitalWrite(led_pin, LOW);
         motorDesligar();
-        Serial.println("Motor: parado");
+        Serial.println("Cancelado");
         break;
 
       case BTN_UNKNOWN:
@@ -203,7 +319,11 @@ void TaskMotor(void *pv)
       if (tempo_restante_ms == 0)
       {
         motor_ligado = false;
-        motorDesligar(); // desliga bobinas ao terminar
+        digitando = true; // volta a aceitar dígitos
+        num_digitos = 0;
+        digitos[0] = digitos[1] = digitos[2] = digitos[3] = 0;
+        digitalWrite(led_pin, LOW);
+        motorDesligar();
         Serial.println("Motor: tempo esgotado");
       }
     }
@@ -218,33 +338,67 @@ void TaskMotor(void *pv)
 }
 
 // ── Task da tela ─────────────────────────────
+// ── área útil dentro do bitmap ───────────────
+#define AREA_X 5  // início horizontal
+#define AREA_Y 10 // início vertical
+#define AREA_W 80 // largura disponível
+#define AREA_H 40 // altura disponível
+
 void TaskTela(void *pv)
 {
-  // tela de abertura: bitmap do microondas
-  display.clearDisplay();
-  display.drawBitmap(0, 0, epd_bitmap_MircoondasPixel, 128, 64, SSD1306_WHITE);
-  display.display();
-
-  while (1)
-  {
-    if (motor_ligado)
-    {
-      // mostra tempo restante enquanto gira
-      display.setTextSize(1);
-      display.setTextColor(SSD1306_WHITE);
-      display.setCursor(20, 25);
-      display.println("GIRANDO...");
-    }
-    else
-    {
-      display.clearDisplay();
-      // tela parada: mostra bitmap
-      display.drawBitmap(0, 0, epd_bitmap_MircoondasPixel, 128, 64, SSD1306_WHITE);
-    }
-
+    display.clearDisplay();
+    display.drawBitmap(0, 0, epd_bitmap_MircoondasPixel, 128, 64, SSD1306_WHITE);
     display.display();
-    vTaskDelay(pdMS_TO_TICKS(200)); // atualiza a tela 5x por segundo
-  }
+    vTaskDelay(pdMS_TO_TICKS(2000));
+
+    while (1)
+    {
+        display.clearDisplay();
+        display.drawBitmap(0, 0, epd_bitmap_MircoondasPixel, 128, 64, SSD1306_WHITE);
+
+        if (motor_ligado) {
+            // ── aquecendo: tempo regressivo ───
+            display.setTextSize(2);
+            display.setTextColor(SSD1306_WHITE);
+            display.setCursor(AREA_X + 10, AREA_Y + 4);
+            display.printf("%02lu:%02lu",
+                (tempo_restante_ms / 1000) / 60,
+                (tempo_restante_ms / 1000) % 60);
+
+            display.setTextSize(1);
+            display.setCursor(AREA_X + 13, AREA_Y + 28);
+            display.println("AQUECENDO");
+
+        } else if (num_digitos > 0) {
+            // ── digitando: mostra os dígitos no formato MM:SS ──
+            display.setTextSize(2);
+            display.setTextColor(SSD1306_WHITE);
+            display.setCursor(AREA_X + 10, AREA_Y + 4);
+            display.printf("%d%d:%d%d",
+                digitos[0], digitos[1], digitos[2], digitos[3]);
+
+            display.setTextSize(1);
+            display.setCursor(AREA_X + 16, AREA_Y + 28);
+            display.println("PLAY p/ iniciar");
+
+        } else {
+            // ── parado sem dígitos: relógio ───
+            uint8_t h, m, s;
+            horaAtual(h, m, s);
+
+            display.setTextSize(2);
+            display.setTextColor(SSD1306_WHITE);
+            display.setCursor(AREA_X + 10, AREA_Y + 2);
+            display.printf("%02d:%02d", h, m);
+
+            display.setTextSize(1);
+            display.setCursor(AREA_X + 57, AREA_Y + 28);
+            display.printf(":%02d", s);
+        }
+
+        display.display();
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
 }
 
 void setup()
