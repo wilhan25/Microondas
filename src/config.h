@@ -11,6 +11,7 @@
 #define PIN_MOTOR_4  25
 #define PIN_SDA      22
 #define PIN_SCL      23
+#define PIN_BUZZER   32
 
 // ════════════════════════════════════════════════
 //   MOTOR

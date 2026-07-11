@@ -3,6 +3,7 @@
 #include "estado.h"
 #include "drivers/motor.h"
 #include "drivers/display.h"
+#include "drivers/buzzer.h"
 #include "tasks/task_controle.h"
 #include "tasks/task_motor.h"
 #include "tasks/task_tela.h"
@@ -18,6 +19,7 @@ void setup() {
     digitalWrite(PIN_LED, LOW);
 
     motor_init();
+    buzzer_init();
 
     if (!display_init()) {
         Serial.println("Falha crítica: display não iniciou");

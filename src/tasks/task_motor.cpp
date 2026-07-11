@@ -2,6 +2,7 @@
 #include "../config.h"
 #include "../estado.h"
 #include "../drivers/motor.h"
+#include "../drivers/buzzer.h"
 #include <Arduino.h>
 
 void task_motor(void *pv) {
@@ -35,6 +36,7 @@ void task_motor(void *pv) {
                 memset(estado.digitos, 0, sizeof(estado.digitos));
                 digitalWrite(PIN_LED, LOW);
                 motor_parar();
+                buzzer_bip(3);  
                 Serial.println("[motor] tempo esgotado");
             }
 
