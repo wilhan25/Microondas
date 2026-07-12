@@ -6,11 +6,10 @@
 </p>
 
 # Microondas Inteligente
+O projeto foi desenvolvido com foco em estudar arquitetura de firmware e documentação. A ideia é o Dev que vós fala aprimorar seus conhecimentos em Firmware e arquitetura de sistemas e também em como documentar da melhor forma para que outros possam aprender com este exemplo. Então fiquem a vontade para testarem e entrar em contato para sugestões de melhorias da documentação ou do projeto em si, meus contatos estão disponivéis no meu perfil. =)
 
 ## Descrição
-Sistema de microondas simulado utilizando ESP32 com FreeRTOS, controle remoto infravermelho (protocolo NEC) e display OLED. O usuário digita o tempo de aquecimento pelos botões numéricos do controle no formato **MM:SS**, inicia com o botão **PLAY**, e acompanha a contagem regressiva na tela. Ao término, o motor para e um buzzer avisa que o aquecimento acabou.
-
-O projeto foi desenvolvido com foco em arquitetura de firmware: cada responsabilidade (motor, display, controle IR, relógio, buzzer) vive em um módulo isolado, e a comunicação entre as três tasks concorrentes do FreeRTOS é feita através de um estado compartilhado protegido por mutex — sem isso, duas tasks escrevendo a mesma variável ao mesmo tempo corromperiam os dados silenciosamente.
+Sistema de microondas simulado utilizando ESP32 com FreeRTOS, controle remoto infravermelho (protocolo NEC) e display OLED. O usuário digita o tempo de aquecimento pelos botões numéricos do controle no formato **MM:SS**, inicia com o botão **PLAY**, e acompanha a contagem regressiva na tela. O LED serve para simular que o microondas está esquentando e o motor para o prato girando. Ao término, o motor para e um buzzer avisa que o aquecimento acabou.
 
 ## Componentes
 | Componente | Quantidade |
@@ -22,28 +21,33 @@ O projeto foi desenvolvido com foco em arquitetura de firmware: cada responsabil
 | Driver ULN2003 | 1 |
 | Display OLED I2C 128x64 (SSD1306) | 1 |
 | Buzzer 5V | 1 |
+| Transistor S8050 | 1 |
 | LED | 1 |
 | Protoboard | 1 |
+| Resistor 10kΩ | 1 |
+| Resistor 1kΩ | 1 |
+| Resistor 220Ω | 1 |
 | Jumpers | vários |
 
 ## Software Utilizado
-Para o projeto foi utilizado como IDE o VSCode + PlatformIO
-| Biblioteca | Descrição |
-|---|---|
+| Software              | Descrição                          |
+|-----------------------|------------------------------------|
+| VSCode + PlatformIO   | IDE e build system                 |
 | IRremoteESP8266 (crankyoldgit) | Decodificação do protocolo NEC |
 | AccelStepper (waspinator) | Controle do motor de passo |
 | Adafruit SSD1306 + GFX | Biblioteca do display OLED |
 | FreeRTOS | Sistema operacional de tempo real |
 
 ## Arquitetura do Projeto
-O firmware é dividido em camadas, cada uma com responsabilidade única — facilita manutenção e permite trocar um componente sem afetar o resto do código:
+O firmware é dividido em camadas, é a primeira vez que faço esse formato desacoplado para que o código fique mais profissional, a ideia é cada bloco ter responsabilidade única, isso facilita manutenção e permite trocar um componente sem afetar o resto do código:
+
 
 ```
 src/
 ├── config.h              # pinos e constantes do projeto
 ├── estado.h              # struct compartilhado + mutex
 ├── main.cpp              # inicialização e criação das tasks
-├── drivers/              # HAL
+├── drivers/              # Cada componente tem seus próprios arquivos de funções e configurações
 │   ├── controle.h            
 │   ├── motor.h / motor.cpp
 │   ├── display.h / display.cpp
@@ -59,7 +63,7 @@ Três tasks rodam em paralelo: `task_controle` lê o sinal IR e escreve no estad
 
 ## Esquemático
 <p align="center">
-  <img src="include/esquematico_microondas.png" width="700">
+  <img src="include/esquematico.png" width="700">
 </p>
 
 ## Pinagem
@@ -82,11 +86,12 @@ Três tasks rodam em paralelo: `task_controle` lê o sinal IR e escreve no estad
 4. Pressione **POWER** a qualquer momento para cancelar e voltar ao relógio.
 5. Ao zerar o tempo, o motor para, o LED apaga, o buzzer emite três bips, e a tela volta ao relógio automaticamente.
 
-## Licença
-Este projeto está sob a licença MIT — sinta-se livre para usar, modificar e compartilhar.
-
 ## Resultado
 <p align="center">
-  <img src="include/foto_microondas.jpeg" width="400">
-  <img src="include/video_microondas.gif" width="400">
+  <img src="include/resultado2.gif" width="700">
 </p>
+
+
+
+## Licença
+Este projeto está sob a licença MIT — sinta-se livre para usar, modificar e compartilhar.
